@@ -467,6 +467,11 @@ def simple_white_balance(img, strip_squares):
     return cv2.merge(out_channels)
 
 def get_backgroud_square(frame):
+    '''
+    for a given img frame, find the location of qr code and then locate the stripes background area.
+    input: img frame
+    output: stripes background area squares, and the processed img contains only stripes background
+    '''
     codes, frame, qr_square, angle, qr_area = extract(frame, True)
     # mask_area(qr_square, angle)
     # print(qr_square)
@@ -493,6 +498,11 @@ def get_backgroud_square(frame):
     return strip_squares, wb_strip
 
 def get_litmus(img, strip_squares):
+    '''
+    for a given img frame, locate the litmus area.
+    input: img frame
+    output: litmus area squares, and the processed img contains only litmus
+    '''
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     cv2.imwrite("frame_strip_cvtColor.jpg", gray)
     gray = cv2.bilateralFilter(gray, 11, 17, 17)
@@ -523,8 +533,11 @@ def get_litmus(img, strip_squares):
             if area > cv2.contourArea(strip_squares[0]) * 0.05:
                 squares.append(c)
     cv2.drawContours(img, squares, -1, (128, 0, 0), 2)
-    cv2.imwrite("frame_contours.jpg", img)
-    return img, squares
+    # cv2.imwrite("frame_contours.jpg", img)
+    litmus_image, litmus_squares = get_masked_image(img, squares, True)
+    litmus_area = cv2.contourArea(litmus_squares[0])
+    # cv2.imwrite("frame_bg_image.jpg", bg_image)
+    return litmus_image, litmus_squares
 
 
 def filter_white_colors(image):
@@ -545,5 +558,6 @@ frame = cv2.imread('98.JPG')
 strip_squares, wb_strip = get_backgroud_square(frame)
 filtered_wb_strip = filter_white_colors(wb_strip)
 cv2.imwrite("frame_filtered_wb_strip.jpg", filtered_wb_strip)
-get_litmus(filtered_wb_strip, strip_squares)
+litmus_img, litmus_squares = get_litmus(filtered_wb_strip, strip_squares)
+cv2.imwrite("frame_litmus.jpg", litmus_img)
 #%%
