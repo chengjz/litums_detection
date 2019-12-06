@@ -15,6 +15,7 @@ import line_detection
 BLUR_VALUE = 3
 SQUARE_TOLERANCE = .15
 AREA_TOLERANCE = 0.2
+LITMUS_AREA_TOLERANCE = 0.05
 DISTANCE_TOLERANCE = 0.25
 WARP_DIM = 300
 SMALL_DIM = 29
@@ -519,6 +520,9 @@ def get_litmus(img, strip_squares):
     cv2.imwrite("frame_contours.jpg", img)
     contours = sorted(contours, key=lambda x: cv2.contourArea(x))
     squares = []
+    upper = []
+    lower = []
+
     for c in contours:
         # Approximate the contour
         peri = cv2.arcLength(c, True)
@@ -532,12 +536,41 @@ def get_litmus(img, strip_squares):
             # if area > 25 and 1 - SQUARE_TOLERANCE < math.fabs((peri / 4) ** 2) / area < 1 + SQUARE_TOLERANCE and count_children(hierarchy[0], i) >= 2 and has_square_parent(hierarchy[0], square_indices, i) is False:
             if area > cv2.contourArea(strip_squares[0]) * 0.05:
                 squares.append(c)
+
+
+    print("squares")
+    print(len(squares))
+    for x in squares:
+        print(x)
+        print(cv2.contourArea(x))
+
+    # for c in squares:
+    for square in squares:
+
+        area = cv2.contourArea(square)
+        center = get_center(square)
+        peri = cv2.arcLength(square, True)
+        similar = []
+
+        for other in squares:
+            if square[0][0][0] != other[0][0][0] or square[0][0][1] != other[0][0][1]:
+
+                # Determine if square is similar to other square within AREA_TOLERANCE
+                if math.fabs(area - cv2.contourArea(other)) / max(area, cv2.contourArea(other)) <= LITMUS_AREA_TOLERANCE:
+                    final = [square, other]
+
+        # if len(similar) >= 1:
+        #     final = [square, other]
+
     cv2.drawContours(img, squares, -1, (128, 0, 0), 2)
     # cv2.imwrite("frame_contours.jpg", img)
-    litmus_image, litmus_squares = get_masked_image(img, squares, True)
-    litmus_area = cv2.contourArea(litmus_squares[0])
+    
+    final = sorted(final, key=lambda x: cv2.contourArea(x))
+    litmus_image = region_of_interest(img, final)
+    # litmus_image, litmus_squares = get_masked_image(img, squares, True)
+    # litmus_area = cv2.contourArea(litmus_squares[0])
     # cv2.imwrite("frame_bg_image.jpg", bg_image)
-    return litmus_image, litmus_squares
+    return litmus_image, squares, final
 
 
 def filter_white_colors(image):
@@ -558,6 +591,6 @@ frame = cv2.imread('98.JPG')
 strip_squares, wb_strip = get_backgroud_square(frame)
 filtered_wb_strip = filter_white_colors(wb_strip)
 cv2.imwrite("frame_filtered_wb_strip.jpg", filtered_wb_strip)
-litmus_img, litmus_squares = get_litmus(filtered_wb_strip, strip_squares)
+litmus_img, litmus_squares, final = get_litmus(filtered_wb_strip, strip_squares)
 cv2.imwrite("frame_litmus.jpg", litmus_img)
 #%%
