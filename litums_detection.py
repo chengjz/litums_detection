@@ -448,52 +448,78 @@ def get_contours(image, area_threshold):
     
     i = 0
     arr = []
+    
+    min_bounding_area = area_threshold * 5
+    min_rect = []
+    bg_contours = []
     for c in contours:
-
-        x,y,w,h = cv2.boundingRect(c)
-        bounding_area = w * h
-        bounding_contours = np.array([[[x, y]], [[x + w, y]], [[x + w, y + h]], [[x, y + h]]], np.dtype(np.int32))
-        # bounding_contours = [[[x, y]], [[x + w, y]], [[x + w, y + h]], [[x, y + h]]]
-        # print("bounding_contours")
-        # print(bounding_contours)
-        # print(c)
-        # arr += bounding_contours
+        rect = cv2.minAreaRect(c)
+        # print("rect")
+        # print(rect)
+        box = cv2.boxPoints(rect)
+        box = np.int0(box)
+        # cv2.drawContours(img,[box],0,(0,0,255),2)
+        # print("box")
+        # print(box)
+        bounding_area = cv2.contourArea(box)
+        # print("bounding_area")
+        # print(bounding_area)
         # Approximate the contour
         peri = cv2.arcLength(c, True)
         area = cv2.contourArea(c)
         approx = cv2.approxPolyDP(c, 0.03 * peri, True)
+        if bounding_area > area_threshold * 1.16 and bounding_area < min_bounding_area:
+            min_bounding_area = bounding_area
+            min_rect = rect
+            bg_contours = [box]
+            # squares.append(c)
 
-        # Find all quadrilateral contours
-        # if len(approx) >= 4:
-        if bounding_area > area_threshold * 1.17:
-            big_squares.append(bounding_contours)
-            big_square_indices.append(i)
+    # for c in contours:
+    #     x,y,w,h = cv2.boundingRect(c)
+    #     bounding_area = w * h
+    #     bounding_contours = np.array([[[x, y]], [[x + w, y]], [[x + w, y + h]], [[x, y + h]]], np.dtype(np.int32))
+    #     # bounding_contours = [[[x, y]], [[x + w, y]], [[x + w, y + h]], [[x, y + h]]]
+    #     # print("bounding_contours")
+    #     # print(bounding_contours)
+    #     # print(c)
+    #     # arr += bounding_contours
+    #     # Approximate the contour
+    #     peri = cv2.arcLength(c, True)
+    #     area = cv2.contourArea(c)
+    #     approx = cv2.approxPolyDP(c, 0.03 * peri, True)
 
-        if bounding_area <= area_threshold * 1.17:
-            small_squares.append(bounding_contours)
-            small_square_indices.append(i)
-        i += 1
+    #     # Find all quadrilateral contours
+    #     # if len(approx) >= 4:
+    #     if bounding_area > area_threshold * 1.16:
+    #         big_squares.append(bounding_contours)
+    #         big_square_indices.append(i)
 
-    big_cntsSorted = sorted(big_squares, key=lambda x: cv2.contourArea(x))
-    small_cntsSorted = sorted(small_squares, key=lambda x: cv2.contourArea(x))
+    #     if bounding_area <= area_threshold * 1.16:
+    #         small_squares.append(bounding_contours)
+    #         small_square_indices.append(i)
+    #     i += 1
+
+    # big_cntsSorted = sorted(big_squares, key=lambda x: cv2.contourArea(x))
+    # # small_cntsSorted = sorted(small_squares, key=lambda x: cv2.contourArea(x))
     # for x in big_cntsSorted:
     #     print(cv2.contourArea(x))
     # print("bg")
-    # print(area_threshold * 1.17)
+    # print(area_threshold * 1.16)
     # for x in small_cntsSorted:
     #     print(cv2.contourArea(x))
     # test = image.copy()
     # cv2.drawContours(test, big_cntsSorted, -1, (128, 0, 0), 2)
     # cv2.imwrite("frame_bg_big_cntsSorted.jpg", test)
-    return big_cntsSorted,small_cntsSorted, edged
+    return bg_contours, edged
 
 def get_masked_image(image, area_threshold, flag):
     
-    big_cntsSorted, small_cntsSorted, edged = get_contours(image, area_threshold)
+    big_cntsSorted, edged = get_contours(image, area_threshold)
+    print(big_cntsSorted)
     if flag is True:
         squares = [big_cntsSorted[0]]
-    else:
-        squares = [small_cntsSorted[-1]]
+    # else:
+    #     squares = [small_cntsSorted[-1]]
 
     masked_image = region_of_interest(image, squares)
     # cv2.drawContours(image, squares, -1, (0, 0, 0), 2)
@@ -533,6 +559,8 @@ def get_strip_square(img, bg_area):
     max_bounding_area = 0
     max_rect = []
     bg_contours = []
+    print("bounding_area")
+    print(bg_area * 0.7 )
     for c in contours:
         rect = cv2.minAreaRect(c)
         # print("rect")
@@ -549,6 +577,7 @@ def get_strip_square(img, bg_area):
         peri = cv2.arcLength(c, True)
         area = cv2.contourArea(c)
         approx = cv2.approxPolyDP(c, 0.03 * peri, True)
+        print(bounding_area)
         if bounding_area < bg_area * 0.7 and bounding_area > max_bounding_area:
             max_bounding_area = bounding_area
             max_rect = rect
@@ -568,8 +597,8 @@ def get_strip_square(img, bg_area):
     # bg_contours = [get_bounding_contour(squares[-1])]
 
     # strip_image, strip_squares = get_masked_image(bg_image, bg_area * 0.9, False)
-    drawContours = cv2.drawContours(img, bg_contours, -1, (128, 0, 0), 2)
-    cv2.imwrite("frame_drawContours.jpg", drawContours)
+    # drawContours = cv2.drawContours(img, bg_contours, -1, (128, 0, 0), 2)
+    # cv2.imwrite("frame_drawContours.jpg", drawContours)
     masked_image = region_of_interest(img, bg_contours)
     cv2.imwrite("frame_masked_image1.jpg", masked_image)
     print("rect")
@@ -579,14 +608,14 @@ def get_strip_square(img, bg_area):
     print(max_rect)
     # print(rect_to_box_map[squares[-1]])
     # rotate_center = (squares[-1][0], squares[-1][1])
-    rotated_img = masked_image.copy()
+    rotated_img = img.copy()
     if max_rect[2] > 20:
         angel = 90 - max_rect[2] 
     elif max_rect[2] < -20:
         angel = max_rect[2] + 90
     else:
         angel = max_rect[2]
-    print(angel)
+    # print(angel)
     M = cv2.getRotationMatrix2D(max_rect[0], angel, 1)
     rotated = cv2.warpAffine(rotated_img, M, rotated_img.shape[1::-1])
     # rotated_img = rotate_img(rotated_img, max_rect[0], max_rect[2])
@@ -633,7 +662,7 @@ def get_backgroud_square(frame):
     # print(mask)
 
     masked_image = region_of_interest(frame, mask)
-    cv2.imwrite("frame_masked_image.jpg", masked_image)
+    cv2.imwrite("frame_masked_image1.jpg", masked_image)
     
     bg_image, bg_squares = get_masked_image(masked_image, qr_area, True)
     bg_area = cv2.contourArea(bg_squares[0])
@@ -644,6 +673,9 @@ def get_backgroud_square(frame):
     rotate_strip = cv2.imread("frame_rotated_img.jpg")
     strip_img, strip_squares, rotate_strip =  get_strip_square(rotate_strip, bg_area)
 
+    # print("area")
+    # print(qr_area * 0.6)
+    # print(cv2.contourArea(strip_squares[0]))
     # masked_image = region_of_interest(strip_img, strip_squares)
     cv2.imwrite("frame_strip_masked_image.jpg", strip_img)
     # cv2.drawContours(frame, strip_squares, -1, (5, 5, 5), 2)
@@ -720,36 +752,84 @@ def get_litmus(img, strip_squares):
     # print(len(contours))
     # print(len(contours[0]))
     # print((contours[0][0]))
+    arrY = [contours[y][x][0][1] for y in range(len(contours)) for x in range(len(contours[y]))]
+    lower_boundY = min(arrY) + (max(arrY) - min(arrY)) * 0.2
+    upper_boundY = min(arrY) + (max(arrY) - min(arrY)) * 0.8
+    litums_arrX_right = [contours[y][x][0][0] for y in range(len(contours)) for x in range(len(contours[y])) if contours[y][x][0][0] > (dimensions[1] / 2) and contours[y][x][0][1] > lower_boundY and contours[y][x][0][1] < upper_boundY]
+    litums_arrX_left = [contours[y][x][0][0] for y in range(len(contours)) for x in range(len(contours[y])) if contours[y][x][0][0] < (dimensions[1] / 2) and contours[y][x][0][1] > lower_boundY and contours[y][x][0][1] < upper_boundY]
     arrX_right = [contours[y][x][0][0] for y in range(len(contours)) for x in range(len(contours[y])) if contours[y][x][0][0] > (dimensions[1] / 2)]
     arrX_left = [contours[y][x][0][0] for y in range(len(contours)) for x in range(len(contours[y])) if contours[y][x][0][0] < (dimensions[1] / 2)]
-    arrY = [contours[y][x][0][1] for y in range(len(contours)) for x in range(len(contours[y]))]
     arrX = [contours[y][x][0][0] for y in range(len(contours)) for x in range(len(contours[y]))]
+    
+    left_boundX = min(arrX) + (max(arrX) - min(arrX)) * 0.2
+    right_boundX = min(arrX) + (max(arrY) - min(arrX)) * 0.8
+    litums_arrY_upper = [contours[y][x][0][1] for y in range(len(contours)) for x in range(len(contours[y])) if contours[y][x][0][1] > (dimensions[0] / 2) and contours[y][x][0][0] > left_boundX and contours[y][x][0][0] < right_boundX]
+    litums_arrY_lower = [contours[y][x][0][1] for y in range(len(contours)) for x in range(len(contours[y])) if contours[y][x][0][1] < (dimensions[0] / 2) and contours[y][x][0][0] > left_boundX and contours[y][x][0][0] < right_boundX]
+    arrY_upper = [contours[y][x][0][1] for y in range(len(contours)) for x in range(len(contours[y])) if contours[y][x][0][1] > (dimensions[0] / 2)]
+    arrY_lower = [contours[y][x][0][1] for y in range(len(contours)) for x in range(len(contours[y])) if contours[y][x][0][1] < (dimensions[0] / 2)]
+    
+    
     # print(dimensions)
     # print(arrY)
     # print(arrX_right)
     # print(arrX_left)
-    
-    left_bound = (int)(np.mean(arrX_left))
-    
     # print(arrY)
-    crop_img = img[min(arrY):max(arrY), (int)(np.mean(arrX_left)):(int)(np.mean(arrX_right))]
+    print(litums_arrX_right)
+    print(litums_arrX_left)
+    print(img.shape)
+    a = np.mean(arrX_right) - np.mean(arrX_left)
+    b = min(arrX_right) - max(arrX_left)
+    # print(arrX_right)
+    # print(arrX_left)
+    # print(a, b)
+    if len(litums_arrY_upper) == 0:
+        upper = img.shape[0]
+    if len(litums_arrY_lower) == 0:
+        lower = 0
+    # if len(litums_arrY_lower) != 0 or len(litums_arrY_upper) != 0 or ((np.mean(arrY_upper) - np.mean(arrY_lower))) * 0.5 > (min(litums_arrY_upper) - max(litums_arrY_lower)):
+    #     lower = (int)(np.mean(arrY_lower))
+    #     upper = (int)(np.mean(arrY_upper))
+    # elif ((np.mean(arrX_right) - np.mean(arrX_left))) * 0.5 > (min(arrX_right) - max(arrX_left)):
+    #     crop_img = img[min(arrY):max(arrY), (int)(np.mean(arrX_left)):(int)(np.mean(arrX_right))]
+    else:
+        lower = (int)(max(litums_arrY_lower))  if len(litums_arrY_lower) != 0 else 0
+        upper = (int)(min(litums_arrY_upper)) if len(litums_arrY_upper) != 0 else 0
+    if upper < img.shape[0] * 0.7:
+        upper = (int)(np.mean(arrY_upper))
+    if lower > img.shape[0] * 0.3:
+        lower = (int)(np.mean(arrY_lower))
+
+    # if len(litums_arrX_right) == 0:
+    #     right = img.shape[1]
+    # if len(litums_arrX_left) == 0:
+    #     left = 0
+    if (len(litums_arrX_right) != 0 and len(litums_arrX_left) != 0) and ((np.mean(arrX_right) - np.mean(arrX_left))) * 0.7 > (min(litums_arrX_right) - max(litums_arrX_left)):
+        left = (int)(np.mean(arrX_left))
+        right = (int)(np.mean(arrX_right))
+    # elif ((np.mean(arrX_right) - np.mean(arrX_left))) * 0.5 > (min(arrX_right) - max(arrX_left)):
+    #     crop_img = img[min(arrY):max(arrY), (int)(np.mean(arrX_left)):(int)(np.mean(arrX_right))]
+    else:
+        left = (int)(max(litums_arrX_left)) if len(litums_arrX_left) != 0 else 0
+        right = (int)(min(litums_arrX_right)) if len(litums_arrX_right) != 0 else img.shape[1]
+
+    crop_img = img[lower:upper, left:right]
     # cv2.imwrite("frame_crop_imgimage.jpg", crop_img)
     
-    for c in contours:
-        # Approximate the contour
-        peri = cv2.arcLength(c, True)
-        area = cv2.contourArea(c)
-        approx = cv2.approxPolyDP(c, 0.1 * peri, True)
-        # print(area)
-        # print(peri, area, len(approx))
-        # Find all quadrilateral contours
-        if len(approx) >= 4:
-            # Determine if quadrilateral is a square to within SQUARE_TOLERANCE
-            # if area > 25 and 1 - SQUARE_TOLERANCE < math.fabs((peri / 4) ** 2) / area < 1 + SQUARE_TOLERANCE and count_children(hierarchy[0], i) >= 2 and has_square_parent(hierarchy[0], square_indices, i) is False:
-            # if area > cv2.contourArea(strip_squares[0]) * 0.05:
-            squares.append(c)
+    # for c in contours:
+    #     # Approximate the contour
+    #     peri = cv2.arcLength(c, True)
+    #     area = cv2.contourArea(c)
+    #     approx = cv2.approxPolyDP(c, 0.1 * peri, True)
+    #     # print(area)
+    #     # print(peri, area, len(approx))
+    #     # Find all quadrilateral contours
+    #     if len(approx) >= 4:
+    #         # Determine if quadrilateral is a square to within SQUARE_TOLERANCE
+    #         # if area > 25 and 1 - SQUARE_TOLERANCE < math.fabs((peri / 4) ** 2) / area < 1 + SQUARE_TOLERANCE and count_children(hierarchy[0], i) >= 2 and has_square_parent(hierarchy[0], square_indices, i) is False:
+    #         # if area > cv2.contourArea(strip_squares[0]) * 0.05:
+    #         squares.append(c)
 
-    squares = sorted(squares, key=lambda x: cv2.contourArea(x))
+    # squares = sorted(squares, key=lambda x: cv2.contourArea(x))
     # cv2.drawContours(img, contours, -1, (128, 0, 0), 2)
     # cv2.imwrite("frame_squares.jpg", img)   
 
@@ -870,9 +950,9 @@ def get_crop_strip(strip_squares, img):
         arrX = [strip_squares[y][x][0] for y in range(len(strip_squares)) for x in range(len(strip_squares[y]))]
         arrY = [strip_squares[y][x][1] for y in range(len(strip_squares)) for x in range(len(strip_squares[y]))]
 
-    print(min(arrX), max(arrX))
-    print("/n")
-    print(min(arrY), max(arrY))
+    # print(min(arrX), max(arrX))
+    # print("/n")
+    # print(min(arrY), max(arrY))
 
     # crop_img = img[min(arrY):max(arrY), min(arrX) : (int)(min(arrX) + (max(arrX) - min(arrX)) * 0.1)]
     if (max(arrY) - min(arrY)) > (max(arrX) - min(arrX)):
@@ -883,12 +963,22 @@ def get_crop_strip(strip_squares, img):
         # lower_bound2 = (int)(min(arrY) + (max(arrY) - min(arrY)) * scale[3])
         upper_arrX = [arrX[i] for i in range(len(arrX)) if arrY[i] > bound[0] and arrY[i] < bound[1]]
         lower_arrX = [arrX[i] for i in range(len(arrX)) if arrY[i] > bound[2] and arrY[i] < bound[3]]
+        if (max(upper_arrX) - min(upper_arrX)) < 0.6 *  (max(arrX) - min(arrX)):
+            upper_crop_img = img[bound[0] + 1:bound[1] - 2, min(arrX):max(arrX)]
+        else :
+            upper_crop_img = img[bound[0] :bound[1] - 2, min(upper_arrX):max(upper_arrX)]
+
+        if (max(lower_arrX) - min(lower_arrX)) < 0.6 *  (max(arrX) - min(arrX)):
+            lower_crop_img = img[bound[2] :bound[3] - 2, min(arrX):max(arrX)]
+        else :
+            lower_crop_img = img[bound[2] :bound[3] - 2, min(lower_arrX):max(lower_arrX)]
+
         # try:
-        #     upper_crop_img = img[upper_bound1 :upper_bound2 - 2, min(upper_arrX):max(upper_arrX)]
-        #     lower_crop_img = img[lower_bound1 :lower_bound2 - 2, min(lower_arrX):max(lower_arrX)]
+        #     upper_crop_img = img[bound[0] :bound[1] - 2, min(upper_arrX):max(upper_arrX)]
+        #     lower_crop_img = img[bound[2] :bound[3] - 2, min(lower_arrX):max(lower_arrX)]
         # except:
-        upper_crop_img = img[bound[0] + 1:bound[1] - 2, min(arrX):max(arrX)]
-        lower_crop_img = img[bound[2] :bound[3] - 2, min(arrX):max(arrX)]
+        #     upper_crop_img = img[bound[0] + 1:bound[1] - 2, min(arrX):max(arrX)]
+        #     lower_crop_img = img[bound[2] :bound[3] - 2, min(arrX):max(arrX)]
     else:
         bound = [(int)(min(arrX) + (max(arrX) - min(arrX))) * x for x in scale]
         # upper_bound1 = (int)(min(arrY) + (max(arrY) - min(arrY)) * 0.006)
@@ -897,12 +987,23 @@ def get_crop_strip(strip_squares, img):
         # lower_bound2 = (int)(min(arrY) + (max(arrY) - min(arrY)) * 0.238)
         upper_arrY = [arrY[i] for i in range(len(arrY)) if arrX[i] > bound[0] and arrX[i] < bound[1]]
         lower_arrY = [arrY[i] for i in range(len(arrY)) if arrX[i] > bound[2] and arrX[i] < bound[3]]
+        if (max(upper_arrY) - min(upper_arrY)) < 0.6 *  (max(arrY) - min(arrY)):
+            upper_crop_img = img[min(arrY):max(arrY), bound[0] :bound[1] - 2]
+        else :
+            upper_crop_img = img[min(upper_arrY):max(upper_arrY), bound[0] :bound[1] - 2]
+
+        if (max(lower_arrY) - min(lower_arrY)) < 0.6 *  (max(arrY) - min(arrY)):
+            lower_crop_img = img[min(arrY):max(arrY), bound[2] :bound[3] - 2]
+        else :
+            lower_crop_img = img[min(lower_arrY):max(lower_arrY), bound[2] :bound[3] - 2]
+
+
         # try:
-        #     upper_crop_img = img[min(upper_arrY):max(upper_arrY), upper_bound1 :upper_bound2 - 2]
-        #     lower_crop_img = img[min(lower_arrX):max(lower_arrX), lower_bound1 :lower_bound2 - 2]
+        #     upper_crop_img = img[min(upper_arrY):max(upper_arrY), bound[0] :bound[1] - 2]
+        #     lower_crop_img = img[min(lower_arrX):max(lower_arrX), bound[2] :bound[3] - 2]
         # except:
-        upper_crop_img = img[min(arrY):max(arrY), bound[0] :bound[1] - 2]
-        lower_crop_img = img[min(arrY):max(arrY), bound[2] :bound[3] - 2]
+        #     upper_crop_img = img[min(arrY):max(arrY), bound[0] :bound[1] - 2]
+        #     lower_crop_img = img[min(arrY):max(arrY), bound[2] :bound[3] - 2]
 
     crop_img = img[min(arrY):max(arrY), min(arrX):max(arrX)]
     cv2.imwrite("frame_upper_crop_img.jpg", upper_crop_img)
@@ -920,7 +1021,7 @@ def white_balance(img):
     return result
 
 # # def main(frame):
-# frame = cv2.imread('1.89.JPG')
+# frame = cv2.imread('0.530.JPG')
 # # simple_wb_out = white_balance(frame)
 # lower_crop_litmus_img, upper_crop_litmus_img = get_upper_lower_litums(frame)
 # cv2.imwrite("lower_crop_litmus_img.jpg", lower_crop_litmus_img)
