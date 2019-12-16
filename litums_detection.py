@@ -515,7 +515,7 @@ def get_contours(image, area_threshold):
 def get_masked_image(image, area_threshold, flag):
     
     big_cntsSorted, edged = get_contours(image, area_threshold)
-    print(big_cntsSorted)
+    # print(big_cntsSorted)
     if flag is True:
         squares = [big_cntsSorted[0]]
     # else:
@@ -559,8 +559,8 @@ def get_strip_square(img, bg_area):
     max_bounding_area = 0
     max_rect = []
     bg_contours = []
-    print("bounding_area")
-    print(bg_area * 0.7 )
+    # print("bounding_area")
+    # print(bg_area * 0.7 )
     for c in contours:
         rect = cv2.minAreaRect(c)
         # print("rect")
@@ -577,7 +577,7 @@ def get_strip_square(img, bg_area):
         peri = cv2.arcLength(c, True)
         area = cv2.contourArea(c)
         approx = cv2.approxPolyDP(c, 0.03 * peri, True)
-        print(bounding_area)
+        # print(bounding_area)
         if bounding_area < bg_area * 0.7 and bounding_area > max_bounding_area:
             max_bounding_area = bounding_area
             max_rect = rect
@@ -601,12 +601,12 @@ def get_strip_square(img, bg_area):
     # cv2.imwrite("frame_drawContours.jpg", drawContours)
     masked_image = region_of_interest(img, bg_contours)
     cv2.imwrite("frame_masked_image1.jpg", masked_image)
-    print("rect")
+    # print("rect")
     rect = cv2.minAreaRect(squares[-1])
     bg_area = cv2.contourArea(np.int0(cv2.boxPoints(rect)))
-    print(max_bounding_area)
-    print(max_rect)
-    # print(rect_to_box_map[squares[-1]])
+    # print(max_bounding_area)
+    # print(max_rect)
+    # # print(rect_to_box_map[squares[-1]])
     # rotate_center = (squares[-1][0], squares[-1][1])
     rotated_img = img.copy()
     if max_rect[2] > 20:
@@ -774,9 +774,9 @@ def get_litmus(img, strip_squares):
     # print(arrX_right)
     # print(arrX_left)
     # print(arrY)
-    print(litums_arrX_right)
-    print(litums_arrX_left)
-    print(img.shape)
+    # print(litums_arrX_right)
+    # print(litums_arrX_left)
+    # print(img.shape)
     a = np.mean(arrX_right) - np.mean(arrX_left)
     b = min(arrX_right) - max(arrX_left)
     # print(arrX_right)
