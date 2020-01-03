@@ -64,7 +64,7 @@ Use the following:
 git clone https://github.com/chengjz/litums_detection.git
 ```
 
-#### 2.4. install pakckages
+#### 2.4. Install packages
 cd to this directory and install packesges
 Use the following:
 
