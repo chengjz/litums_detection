@@ -18,7 +18,7 @@ And Python3 is also required.
 
 ------
 
-### 2. Use
+### 2. Setting Environment
 
 ------
 
@@ -70,4 +70,21 @@ Use the following:
 
 ```shell
 pip3 install -r requirements.txt
+```
+
+### 3. Use
+
+------
+
+#### 3.1. processing single image
+Use the following:
+
+```shell
+python3 test-single-image.py 
+```
+#### 3.1. processing directory(images)
+Use the following:
+
+```shell
+python3 processing_all_img.py
 ```
