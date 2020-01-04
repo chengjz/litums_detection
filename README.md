@@ -83,6 +83,8 @@ Use the following:
 python3 test-single-image.py 
 ```
 #### 3.1. processing directory(images)
+Change processing_all_img.py, in the line 55 change dirName1 to the directory path in your local host.
+
 Use the following:
 
 ```shell
