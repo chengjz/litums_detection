@@ -7,9 +7,9 @@ import os
 from os import listdir
 import numpy as np
 # import matplotlib.pyplot as plt
-from scipy import stats
-from sklearn import linear_model
-from scipy.misc import imread, imsave, imresize, imshow
+# from scipy import stats
+# from sklearn import linear_model
+# from scipy.misc import imread, imsave, imresize, imshow
 # import line_detection
 
 BLUR_VALUE = 3
