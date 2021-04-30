@@ -69,6 +69,10 @@ cd to this directory and install packesges
 Use the following:
 
 ```shell
+cd litums_detection
+```
+
+```shell
 pip3 install -r requirements.txt
 ```
 
