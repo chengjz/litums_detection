@@ -24,8 +24,8 @@ This repository hosts scripts to generate White balanced Cropped litums image an
 * Find the minor parts of the strip:
     1. Build a virtual box by extending the edges of the rectangle containing major part of strip
     2. Traverse each contour, if the contour meets the following criteria, we assume it's also part of the strip, concatenate this contour to the contour of majority_strip :
-        a. the contour the moment of the contour is inside the virtual box
-        b. (edge point to the virtual rectangle is inside the virtual box
+        (a) The contour the moment of the contour is inside the virtual box
+        (b) (edge point to the virtual rectangle is inside the virtual box
         or the distance of edge point to the virtual rectangle within tolerance)
 * The rationale behind this step: canny edge detection may detect the strip as separated parts and the morphological transformations is not enough to group the separated contours of the strip
 5. Apply simple_white_balance to the strip
