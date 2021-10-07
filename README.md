@@ -8,16 +8,32 @@ This repository hosts scripts to generate White balanced Cropped litums image an
 
 
 ## 2. Methodology
-1. Detect QR code by utilizing the tool [QR-Code-Extractor](https://github.com/IdreesInc/QR-Code-Extractor)
-2. Apply mask based on QR code location
-3. Apply grey world white balance
-4. Canny edge detection, smoothing to find black rectangle contours
-5. Find strip contours 
-6. Locate strip vertices
-7. Apply Simple white balance
-8. Find litmus paper vertices 
-9. Crop largest circle possible in litmus squares
-10. Fetch color values
+1. Apply white balance to improve the performance of edge detection and qr-code-extractor
+2. Detect the qr-code location by utilizing the tool QR-Code-Extractor and then rotate the img based on the qr-code angle. For the detailed description of the qr-code-extractor, refers here: https://github.com/IdreesInc/QR-Code-Extractor#methodology---how-it-works 
+3. Find exact position of the black background
+3.1 Get the approximate position of the black background to narrow down the search area
+3.2 Masked the travail part
+3.3 Get the exact position of the black background based on the approximate position and qr_area
+
+4. Get the strip position with the following steps:
+* Find the major part of the strip:          
+    1. use the canny edge detection to find all the contours
+    2. Set the (back_ground_area * fixed_ratio) as the upper bound of the contours area
+    3. traverse each contour, calculate the bounding area of it’s minAreaRect
+    4. the contour of major part should be the contour with maximum bounding area under the upper bound
+* Find the minor parts of the strip:
+    1. Build a virtual box by extending the edges of the rectangle containing major part of strip
+    2. Traverse each contour, if the contour meets the following criteria, we assume it's also part of the strip, concatenate this contour to the contour of majority_strip :
+        a. the contour the moment of the contour is inside the virtual box
+        b. (edge point to the virtual rectangle is inside the virtual box
+        or the distance of edge point to the virtual rectangle within tolerance)
+* The rationale behind this step: canny edge detection may detect the strip as separated parts and the morphological transformations is not enough to group the separated contours of the strip
+5. Apply simple_white_balance to the strip
+    * white_balanced based on the white pixel of the strip. For each RBG channel, find the pixel's peak value, and then extend the value range of the strip from [0, peak value] to [0, 255]. 
+    * The reason behind it is that we already know that the RGB value of the strip white part should be (255, 255, 255)
+6. Get litmus square: Given the strip img and the vertices of the strip rectangle, return the exact position of the litmus with some math. 
+7. Get crop circle of the litmus: Given a litmus, find the biggest circle inside this rectangle
+8. get_rgb_value_of_circle_strip
 
 ## 3. How to Use this script
 
@@ -93,12 +109,4 @@ Use the following:
 
 ```shell
 python3 test-single-image.py 
-```
-#### 3.3.2 processing directory(images)
-Change processing_all_img.py, in the line 55 change dirName1 to the directory path in your local host.
-
-Use the following:
-
-```shell
-python3 processing_all_img.py
 ```

@@ -2,7 +2,7 @@
 import cv2
 import litums_detection as ld
 
-frame = cv2.imread('L_I5_0.13.JPG')
+frame = cv2.imread('test.jpg')
 
 try:
     free_circle_cropped_img, free_rgb, total_circle_cropped_img, total_rgb = ld.processing_img(frame)
