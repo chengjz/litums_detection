@@ -33,7 +33,7 @@ This repository hosts scripts to generate White balanced Cropped litums image an
     * The reason behind it is that we already know that the RGB value of the strip white part should be (255, 255, 255)
 6. Get litmus square: Given the strip img and the vertices of the strip rectangle, return the exact position of the litmus with some math. 
 7. Get crop circle of the litmus: Given a litmus, find the biggest circle inside this rectangle
-8. get_rgb_value_of_circle_strip
+8. Get rgb value of the cropped circle
 
 ## 3. How to Use this script
 
