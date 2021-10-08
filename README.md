@@ -9,7 +9,7 @@ This repository hosts scripts to generate White balanced Cropped litums image an
 
 ## 2. Methodology
 1. Apply white balance to improve the performance of edge detection and qr-code-extractor
-2. Detect the qr-code location by utilizing the tool QR-Code-Extractor and then rotate the img based on the qr-code angle. For the detailed description of the qr-code-extractor, refers here: https://github.com/IdreesInc/QR-Code-Extractor#methodology---how-it-works 
+2. Detect the qr-code location by utilizing the tool [QR-Code-Extractor](https://github.com/IdreesInc/QR-Code-Extractor) and then rotate the img based on the qr-code angle. For the detailed description of the qr-code-extractor, refers here: https://github.com/IdreesInc/QR-Code-Extractor#methodology---how-it-works 
 3. Find exact position of the black background
     1. Based on the QR-Code Location, Get the approximate position of the black background to narrow down the search area
     2. Masked the trivial part
