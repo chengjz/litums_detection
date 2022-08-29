@@ -74,11 +74,11 @@ def white_balance(img):
     result = cv2.cvtColor(result, cv2.COLOR_LAB2BGR)
     return result
 
-def simple_white_balance(img, strip_squares):
+def simple_white_balance(img):
     """
     white_balanced based on the white pixel of the strip
     For each RBG channel, find the pixel's peak value, and then extend the value range of the strip from [0, peak value] to [0, 255]. 
-    The reason behind it is that we already know that the RGB value of the strip white part should be (255, 255, 255)
+    The reason behind it is that we already know that the bgr value of the strip white part should be (255, 255, 255)
     """
     assert img.shape[2] == 3
 
@@ -176,6 +176,7 @@ def get_bg_rectangle(image, area_threshold):
     masked_image = region_of_interest(image.copy(), rectangle)
     return masked_image, rectangle
 
+
 def get_bounding_contour(contour):
     return np.int0(cv2.boxPoints(cv2.minAreaRect(contour)))
 
@@ -207,9 +208,7 @@ def get_strip_rectangle(bg_img, bg_area, bg_rectangle):
     '''
     img = bg_img.copy()
     edged = pre_processing_img_for_edge_detection(img, 1, 1, 200)
-    thresh_gray = cv2.morphologyEx(edged, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)))
-    # contours, hierarchy = cv2.findContours(thresh_gray.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    contours, hierarchy = cv2.findContours(edged.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(edged.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     contours = sorted(contours, key=lambda x: cv2.contourArea(x))
     hull_list = []
     for i in range(len(contours)):
@@ -221,6 +220,7 @@ def get_strip_rectangle(bg_img, bg_area, bg_rectangle):
         color = (rng.randint(0, 256), rng.randint(0, 256), rng.randint(0, 256))
         cv2.drawContours(drawing, contours, i, color)
         cv2.drawContours(drawing, hull_list, i, color)
+    #cv2.imwrite("frame_masked_image_.jpg", drawing)
 
     squares = []
     max_bounding_area = 0
@@ -245,13 +245,14 @@ def get_strip_rectangle(bg_img, bg_area, bg_rectangle):
                 max_bounding_area = bounding_area
                 max_rect = rect
                 strip_contours = [box]
-        # else:
-        #     print("bounding_area > bg_area * 0.7 ")
+        #else:
+            #print(bounding_area,bg_area)
+            #print("bounding_area > bg_area * 0.95 ")
 
     if (len(squares) == 0):
         print("strip contours not founded")
     squares = sorted(squares, key=lambda x: cv2.contourArea(x))
-
+    
     # find the major part of the strip contour
     majority_strip = strip_contours[-1]
 
@@ -301,7 +302,6 @@ def find_strip_exact_pos(virtual_box, approximate_rect):
     right_line = [virtual_box[1], virtual_box[2]]
     bottom_lie = [approximate_rect[2], approximate_rect[3]]
     left_line = [virtual_box[3], virtual_box[0]]
-
     upper_left_edge = line_intersection(upper_line, left_line)
     upper_right_edge = line_intersection(upper_line, right_line)
     bottom_left_edge = line_intersection(bottom_lie, left_line)
@@ -348,14 +348,14 @@ def is_contour_part_of_strip(contour, virtual_box, tolerant_distance):
         return False
 
 def is_point_nearby_box(point, box, distance):
-    dis = cv2.pointPolygonTest(box, (point[0], point[1]), True)
+    dis = cv2.pointPolygonTest(box, (int(point[0]), int(point[1])), True)
     if dis < distance:
         return True
     else:
         return False
 
 def is_point_inside_box(point, box):
-    if (cv2.pointPolygonTest(box, (point[0], point[1]), False) == -1):
+    if (cv2.pointPolygonTest(box, (int(point[0]), int(point[1])), False) == -1):
         return False
     else:
         return True
@@ -404,9 +404,9 @@ def get_strip(frame):
     '''
 
     # straighten the img based on the qr code angle
-    _, _, _, rotated_img = qe.extract(frame, False)
+    _, _, _, rotated_img = qe.extract(frame, True)
     # get the qr code position
-    frame, qr_square, qr_area, rotated_img = qe.extract(rotated_img, False)
+    frame, qr_square, qr_area, rotated_img = qe.extract(rotated_img, True)
 
     # get the approximate position of the black background to narrow down the search range
     qr_pos = [qr_square[x][0][:] for x in range(len(qr_square))]
@@ -420,6 +420,25 @@ def get_strip(frame):
 
     # straighten the img based on the strip angle
     strip_img, _, rotate_strip = get_strip_rectangle(bg_img.copy(), bg_area, bg_squares)
+    # get the strip position
+    strip_img, strip_squares, rotate_strip = get_strip_rectangle(rotate_strip, bg_area, bg_squares)
+
+    return strip_squares, strip_img
+
+def get_strip_manual(frame):
+
+    # get the exact position of the black background
+    dim = frame.shape
+    up_left = [0,0]
+    up_right = [0,dim[0]]
+    bot_right = [dim[1],0]
+    bot_left = [dim[1],dim[0]]
+
+    bg_squares = [np.array([up_left, up_right, bot_left, bot_right])]
+    bg_area = cv2.contourArea(bg_squares[0])
+
+    # straighten the img based on the strip angle
+    strip_img, _, rotate_strip = get_strip_rectangle(frame.copy(), bg_area, bg_squares)
     # get the strip position
     strip_img, strip_squares, rotate_strip = get_strip_rectangle(rotate_strip, bg_area, bg_squares)
 
@@ -439,31 +458,34 @@ def get_litmus_square(strip_img, strip_squares, scale=LITMUS_RATIO):
     :return free_litmus_masked_image: the masked img of free_litmus
     :return total_litmus_masked_image: the masked img of total_litmus
     '''
+
     upper_left, upper_right, bottom_right, bottom_left = strip_squares[0]
-    free_upper_left = [upper_left[0] - (upper_left[0] - bottom_left[0]) * scale[0],
+    if abs(bottom_left[0] - bottom_right[0]) > abs(bottom_left[1] - upper_left[1]):
+        bottom_left, upper_left, upper_right, bottom_right = strip_squares[0]
+    
+    total_upper_left = [upper_left[0] - (upper_left[0] - bottom_left[0]) * scale[0],
                        upper_left[1] - (upper_left[1] - bottom_left[1]) * scale[0]]
-    free_upper_right = [upper_right[0] - (upper_right[0] - bottom_right[0]) * scale[0],
+    total_upper_right = [upper_right[0] - (upper_right[0] - bottom_right[0]) * scale[0],
                         upper_right[1] - (upper_right[1] - bottom_right[1]) * scale[0]]
-    free_bottom_left = [upper_left[0] - (upper_left[0] - bottom_left[0]) * scale[1],
+    total_bottom_left = [upper_left[0] - (upper_left[0] - bottom_left[0]) * scale[1],
                         upper_left[1] - (upper_left[1] - bottom_left[1]) * scale[1]]
-    free_bottom_right = [upper_right[0] - (upper_right[0] - bottom_right[0]) * scale[1],
+    total_bottom_right = [upper_right[0] - (upper_right[0] - bottom_right[0]) * scale[1],
                          upper_right[1] - (upper_right[1] - bottom_right[1]) * scale[1]]
-    free_litmus_contour = np.array([free_upper_left, free_upper_right, free_bottom_right, free_bottom_left],
+    total_litmus_contour = np.array([total_upper_left, total_upper_right, total_bottom_right, total_bottom_left],
                                    dtype=np.int32)
 
-    total_upper_left = [upper_left[0] - (upper_left[0] - bottom_left[0]) * scale[2],
+    free_upper_left = [upper_left[0] - (upper_left[0] - bottom_left[0]) * scale[2],
                         upper_left[1] - (upper_left[1] - bottom_left[1]) * scale[2]]
-    total_upper_right = [upper_right[0] - (upper_right[0] - bottom_right[0]) * scale[2],
+    free_upper_right = [upper_right[0] - (upper_right[0] - bottom_right[0]) * scale[2],
                          upper_right[1] - (upper_right[1] - bottom_right[1]) * scale[2]]
-    total_bottom_left = [upper_left[0] - (upper_left[0] - bottom_left[0]) * scale[3],
+    free_bottom_left = [upper_left[0] - (upper_left[0] - bottom_left[0]) * scale[3],
                          upper_left[1] - (upper_left[1] - bottom_left[1]) * scale[3]]
-    total_bottom_right = [upper_right[0] - (upper_right[0] - bottom_right[0]) * scale[3],
+    free_bottom_right = [upper_right[0] - (upper_right[0] - bottom_right[0]) * scale[3],
                           upper_right[1] - (upper_right[1] - bottom_right[1]) * scale[3]]
-    total_litmus_contour = np.array([total_upper_left, total_upper_right, total_bottom_right, total_bottom_left],
+    free_litmus_contour = np.array([free_upper_left, free_upper_right, free_bottom_right, free_bottom_left],
                                     dtype=np.int32)
 
     return free_litmus_contour, total_litmus_contour
-
 
 def crop_circle(rectangle_contour, rectangle_img):
     '''
@@ -472,11 +494,11 @@ def crop_circle(rectangle_contour, rectangle_img):
     :param rectangle_contour: the vertices of rectangle that containing litmus
     :param rectangle_img: the img
     :return cropped_img: the strip img cropped into circle
-    :return average_rgb: the average rgb value of the strip circle
+    :return average_bgr: the average bgr value of the strip circle
     '''
     radius, cropped_img = crop_circle_inside_square(rectangle_contour, rectangle_img)
-    average_rgb = get_rgb_value_of_circle_strip(cropped_img, radius)
-    return average_rgb, cropped_img
+    average_bgr = get_bgr_value_of_circle_strip(cropped_img, radius)
+    return average_bgr, cropped_img
 
 
 def crop_circle_inside_square(square, img):
@@ -495,7 +517,7 @@ def crop_circle_inside_square(square, img):
     return radius, crop_img
 
 
-def get_rgb_value_of_circle_strip(img, radius):
+def get_bgr_value_of_circle_strip(img, radius):
     try:
         # generate mask
         mask = np.zeros_like(img)
@@ -510,7 +532,6 @@ def get_rgb_value_of_circle_strip(img, radius):
             data.append(int(color))
 
         # opencv images are in bgr format: blue, green, red
-        print("blue, green, red =", data)
         return data
     except:
         return []
@@ -518,21 +539,22 @@ def get_rgb_value_of_circle_strip(img, radius):
 
 def processing_img(frame):
     '''
-    For a given img, return it's cropped circle litmus and the average rgb value
+    For a given img, return it's cropped circle litmus and the average bgr value
 
     :param frame: input image
     :return free_circle_cropped_img: the free litmus img cropped into circle
-    :return free_rgb: the average rgb value of the free litmus
+    :return free_bgr: the average bgr value of the free litmus
     :return total_circle_cropped_img: the total litmus img cropped into circle
-    :return total_rgb: the average rgb value of the total litmus
+    :return total_bgr: the average bgr value of the total litmus
     '''
 
     simple_wb_out = white_balance(frame)
+    #cv2.imwrite("first_wb_out.jpg",simple_wb_out)
     strip_vertices, strip_img = get_strip(simple_wb_out)
-    wb_strip = simple_white_balance(strip_img, strip_vertices)
+    #cv2.imwrite("strip_img.jpg",strip_img)
+    wb_strip = simple_white_balance(strip_img)
+    #cv2.imwrite("wb_strip.jpg", wb_strip)
     free_litmus_contour, total_litmus_contour = get_litmus_square(wb_strip, strip_vertices)
-    print("free:")
-    free_rgb, free_circle_cropped_img = crop_circle(free_litmus_contour, wb_strip)
-    print("total:")
-    total_rgb, total_circle_cropped_img = crop_circle(total_litmus_contour, wb_strip)
-    return free_circle_cropped_img, free_rgb, total_circle_cropped_img, total_rgb, wb_strip
+    free_bgr, free_circle_cropped_img = crop_circle(free_litmus_contour, wb_strip)
+    total_bgr, total_circle_cropped_img = crop_circle(total_litmus_contour, wb_strip)
+    return free_circle_cropped_img, free_bgr, total_circle_cropped_img, total_bgr, wb_strip
